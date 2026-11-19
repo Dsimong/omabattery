@@ -25,7 +25,7 @@ Item {
     height: parent.height
     width: parent.width * Math.max(0, Math.min(100, root.percent)) / 100
     radius: height / 2
-    color: Commons.Color.foreground // TODO(roadmap 1): theme accent / urgent when low
+    color: root.low ? Commons.Color.urgent : Commons.Color.accent
 
     Behavior on width {
       NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic }

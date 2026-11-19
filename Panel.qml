@@ -15,6 +15,11 @@ Panel {
   moduleName: "dsimong.omabattery"
   ipcTarget: "dsimong.omabattery"
 
+  // The bar sizes each widget from its implicit size; without this the slot
+  // is 0x0, the glyph overflows it and the MouseArea receives no clicks.
+  implicitWidth: button.implicitWidth
+  implicitHeight: button.implicitHeight
+
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
 
   // ----------------------------------------------------------------- settings
@@ -33,7 +38,27 @@ Panel {
   }
   readonly property var devices: service ? service.devices : []
 
-  // TODO(roadmap 1): remove once the service builds the device list.
+  // The service is shared by every bar; settings are the same on all of them.
+  Binding { target: root.service; property: "lowThreshold"; value: root.lowThreshold; when: !!root.service }
+  Binding { target: root.service; property: "pollSeconds"; value: root.pollSeconds; when: !!root.service }
+  Binding { target: root.service; property: "headsetcontrol"; value: root.headsetcontrol; when: !!root.service }
+  Binding { target: root.service; property: "notifyLow"; value: root.notifyLow; when: !!root.service }
+
+  // ---------------------------------------------------------------------- bar
+  // devices is sorted lowest first.
+  readonly property var lowest: devices.length > 0 ? devices[0] : null
+  readonly property bool anyLow: devices.some(function(d) { return d.low })
+  readonly property string barText: {
+    if (barLabel === "Lowest" && lowest) return Commons.I18n.formatNumber(lowest.percent) + "%"
+    if (barLabel === "Count" && devices.length > 0) return Commons.I18n.formatNumber(devices.length)
+    return ""
+  }
+
+  // Whoever clicks the icon is likely holding the mouse, so it is awake and
+  // this is the best moment to ask the devices again.
+  onOpenedChanged: if (opened && service) service.refresh()
+
+  // TODO(roadmap 1): remove once the service builds the UPower list.
   function debugDump() {
     var list = UPower.devices.values
     for (var i = 0; i < list.length; i++) {
@@ -49,7 +74,10 @@ Panel {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "󰁹" // nf-md-battery (U+F0079). TODO(roadmap 1): Model.iconFor(lowest device)
+    text: Model.batteryIcon(root.lowest)
+    labelText: root.barText
+    active: root.anyLow
+    tooltipText: strings.t("panel.title")
     onPressed: function(b) {
       if (b === Qt.RightButton) {
         if (root.service) root.service.refresh()
@@ -76,7 +104,7 @@ Panel {
       onCloseRequested: root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
 
-      // TODO(roadmap 1): PanelHero + PanelSectionHeader per group + DeviceRow.
+      // TODO(roadmap 1): PanelHero + PanelSectionHeader per group.
       Column {
         id: column
         anchors.fill: parent

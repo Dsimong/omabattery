@@ -11,7 +11,13 @@ Logitech Unifying/Bolt, USB gaming headsets) in a single panel with battery bars
 |---|---|
 | UPower | Bluetooth with Battery Service, Logitech Unifying/Bolt, kernel `power_supply` peripherals |
 | BlueZ | Bluetooth devices with `batteryAvailable` that UPower does not expose |
+| OpenRazer | Razer wireless mice/keyboards (HyperSpeed receivers) via the `openrazer-driver-dkms` kernel driver |
 | HeadsetControl (optional) | USB-dongle gaming headsets (SteelSeries, HyperX, Logitech G, Corsair…) |
+
+OpenRazer is read straight from sysfs (`charge_level`), so it needs the
+driver and membership in the `openrazer` group, not the daemon. A Razer device
+that has gone to sleep reports 0 through its receiver; omabattery keeps showing
+its last real reading until it wakes up.
 
 ## Install
 
@@ -40,10 +46,14 @@ omarchy plugin enable dsimong.omabattery
 
 ```bash
 omarchy plugin validate .
-omarchy-shell shell rescanPlugins
+omarchy restart shell          # needed after editing QML/JS, see below
 journalctl -t omarchy-shell -f | grep omabattery
 node --test tests/
 ```
+
+Hot reload re-creates the plugin on save but Quickshell serves the QML it
+scanned when the shell started, so code changes only apply after
+`omarchy restart shell`.
 
 ## License
 
