@@ -1,0 +1,12 @@
+{
+  "panel.title": "Wireless devices",
+  "panel.connected": { "one": "%1 connected", "other": "%1 connected" },
+  "panel.empty": "No wireless devices with battery",
+  "group.input": "Input",
+  "group.audio": "Audio",
+  "group.other": "Other",
+  "device.remaining": "%1 left",
+  "device.charging": "Charging",
+  "notify.low.title": "Low battery",
+  "notify.low.body": "%1 is at %2%"
+}

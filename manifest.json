@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "id": "dsimong.omabattery",
+  "name": "Omabattery",
+  "version": "0.1.0",
+  "author": "David",
+  "description": "Battery of your wireless keyboard, mouse and headphones",
+  "license": "MIT",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Omabattery",
+    "description": "Battery of your wireless keyboard, mouse and headphones",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "barLabel": "Lowest",
+      "lowThreshold": 20,
+      "headsetcontrol": true,
+      "pollSeconds": 60,
+      "notifyLow": true
+    },
+    "schema": [
+      {
+        "key": "barLabel",
+        "type": "enum",
+        "label": "Bar label",
+        "options": [
+          "None",
+          "Lowest",
+          "Count"
+        ],
+        "defaultValue": "Lowest"
+      },
+      {
+        "key": "lowThreshold",
+        "type": "integer",
+        "label": "Low battery at (%)",
+        "min": 5,
+        "max": 50,
+        "step": 5,
+        "defaultValue": 20
+      },
+      {
+        "key": "headsetcontrol",
+        "type": "boolean",
+        "label": "Query USB headsets",
+        "defaultValue": true
+      },
+      {
+        "key": "pollSeconds",
+        "type": "integer",
+        "label": "Headset poll (s)",
+        "min": 15,
+        "max": 600,
+        "step": 15,
+        "defaultValue": 60
+      },
+      {
+        "key": "notifyLow",
+        "type": "boolean",
+        "label": "Notify on low battery",
+        "defaultValue": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Wrapper around headsetcontrol -> normalized JSON on stdout.
+# Prints {"devices":[]} when headsetcontrol is missing or finds nothing,
+# so Service.qml never has to special-case a failure.
+set -euo pipefail
+
+if ! command -v headsetcontrol >/dev/null 2>&1; then
+  echo '{"devices":[]}'
+  exit 0
+fi
+
+# TODO(roadmap 3): normalize `headsetcontrol -o json` with jq into
+#   {"devices":[{"name":..., "percent":..., "state":...}]}
+raw="$(headsetcontrol -o json 2>/dev/null || true)"
+if [[ -z "$raw" ]]; then
+  echo '{"devices":[]}'
+else
+  printf '%s\n' "$raw"
+fi

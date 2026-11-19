@@ -1,0 +1,12 @@
+{
+  "panel.title": "Dispositivos inalámbricos",
+  "panel.connected": { "one": "%1 conectado", "other": "%1 conectados" },
+  "panel.empty": "No hay dispositivos inalámbricos con batería",
+  "group.input": "Entrada",
+  "group.audio": "Audio",
+  "group.other": "Otros",
+  "device.remaining": "Quedan %1",
+  "device.charging": "Cargando",
+  "notify.low.title": "Batería baja",
+  "notify.low.body": "%1 está al %2%"
+}
