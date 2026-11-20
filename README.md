@@ -40,7 +40,12 @@ omarchy plugin enable dsimong.omabattery
 
 - Some Bluetooth headphones only expose battery when BlueZ experimental
   features are on: `Experimental = true` in `/etc/bluetooth/main.conf`.
-- HeadsetControl only queries the first headset it finds.
+- USB-dongle headsets need HeadsetControl: `omarchy pkg add headsetcontrol`.
+  Its package ships udev rules that give your user access to the dongle; they
+  apply after replugging it (or rebooting). Without the binary, or with the
+  `headsetcontrol` setting off, omabattery simply skips headsets.
+- A headset switched off keeps showing its last known level until it is on
+  again; the dongle reports no battery while the headset is off.
 
 ## Development
 

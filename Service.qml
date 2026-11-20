@@ -6,7 +6,7 @@ import "Model.js" as Model
 // Single aggregator for the whole shell.
 //
 // Omarchy builds one bar per monitor; if the sources lived in the widget there
-// would be one OpenRazer/headsetcontrol poll per screen. Panel.qml gets this
+// would be one OpenRazer/HeadsetControl poll per screen. Panel.qml gets this
 // instance with bar.shell.serviceFor("dsimong.omabattery") and only draws
 // `devices`.
 Item {
@@ -31,6 +31,7 @@ Item {
   // Raw readings per source, kept so a threshold change can re-normalize
   // without asking the devices again.
   property var openrazerEntries: []
+  property var headsetEntries: []
 
   // Normalized, deduplicated and sorted device list (see Model.js).
   property var devices: []
@@ -39,28 +40,56 @@ Item {
 
   // TODO(roadmap 1): UPower.devices (filter !powerSupply) -> Model.fromUPower.
   // TODO(roadmap 2): Bluetooth.devices with batteryAvailable, dedupe by MAC.
-  // TODO(roadmap 3): headsetcontrol via bin/omabattery-headset, only if present.
   // TODO(roadmap 4): low-battery notification, once per threshold crossing.
   function rebuild() {
-    var openrazer = root.openrazerEntries.map(function(e) {
-      return Model.fromOpenRazer(e, root.lowThreshold)
-    })
-    var next = Model.merge([openrazer])
+    var threshold = root.lowThreshold
+    var openrazer = root.openrazerEntries.map(function(e) { return Model.fromOpenRazer(e, threshold) })
+    var headsets = root.headsetEntries.map(function(e) { return Model.fromHeadset(e, threshold) })
+    var next = Model.merge([openrazer, headsets])
     if (next.length !== root.devices.length)
       console.log("[omabattery] devices: " + next.length)
     root.devices = next
   }
 
-  // Ask every polled source again now (right click on the bar icon).
+  // Ask every polled source again now (timer, right click, panel opened).
   function refresh() {
     pollOpenRazer()
+    pollHeadset()
   }
 
   function pollOpenRazer() {
     if (!openrazerProc.running) openrazerProc.running = true
   }
 
+  // bin/omabattery-headset answers an empty list when headsetcontrol is not
+  // installed, so this only depends on the setting.
+  function pollHeadset() {
+    if (root.headsetcontrol && !headsetProc.running) headsetProc.running = true
+  }
+
   onLowThresholdChanged: rebuild()
+  onHeadsetcontrolChanged: {
+    if (root.headsetcontrol) {
+      pollHeadset()
+    } else {
+      root.headsetEntries = []
+      rebuild()
+    }
+  }
+
+  Process {
+    id: headsetProc
+    command: ["bash", root.binDir + "/omabattery-headset"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        // The setting may have been switched off while the query ran.
+        if (!root.headsetcontrol) return
+        root.headsetEntries = Model.carryHeadset(root.headsetEntries, Model.parseHeadset(text))
+        root.rebuild()
+      }
+    }
+  }
 
   Process {
     id: openrazerProc
@@ -79,6 +108,6 @@ Item {
     running: true
     repeat: true
     triggeredOnStart: true
-    onTriggered: root.pollOpenRazer()
+    onTriggered: root.refresh()
   }
 }

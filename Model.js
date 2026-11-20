@@ -70,13 +70,20 @@ function parseOpenRazer(text) {
 // instead of dropping the device. A device whose line disappears (receiver
 // unplugged) is gone.
 function carryOpenRazer(previous, next) {
+  return carryLast(previous, next, function(e) { return e.level > 0 })
+}
+
+// Raw entries (any polled source) keyed by vendor:product. An entry without a
+// reading takes the last one that had it, marked stale; one with no earlier
+// reading is passed through for from*() to drop.
+function carryLast(previous, next, hasReading) {
   var last = {}
   var prev = previous || []
   for (var i = 0; i < prev.length; i++) {
-    if (prev[i] && prev[i].level > 0) last[prev[i].vendor + ":" + prev[i].product] = prev[i]
+    if (prev[i] && hasReading(prev[i])) last[prev[i].vendor + ":" + prev[i].product] = prev[i]
   }
   return (next || []).map(function(e) {
-    if (e.level > 0) return e
+    if (hasReading(e)) return e
     var p = last[e.vendor + ":" + e.product]
     return p ? Object.assign({}, p, { stale: true }) : e
   })
@@ -103,9 +110,71 @@ function fromOpenRazer(entry, lowThreshold) {
   }
 }
 
-// TODO(roadmap 3): map one entry of `bin/omabattery-headset` output -> normalized device.
+// ----------------------------------------------------------- HeadsetControl
+
+var MAX_JSON = 1024 * 1024
+
+// `headsetcontrol -o json` (4.x), via bin/omabattery-headset:
+//   { devices: [ { device, vendor, product, id_vendor: "0x046d", id_product: "0x0ab5",
+//                  battery: { status, level, time_to_empty_min? } } ] }
+// battery.status: BATTERY_AVAILABLE | BATTERY_CHARGING | BATTERY_UNAVAILABLE
+// (headset off, level -1) | BATTERY_ERROR | BATTERY_TIMEOUT | UNKNOWN.
+// Devices without a battery object, or with malformed ids, are dropped.
+function parseHeadset(text) {
+  var raw = String(text || "")
+  if (raw.length === 0 || raw.length > MAX_JSON) return []
+  var data
+  try { data = JSON.parse(raw) } catch (e) { return [] }
+  var devices = data && Array.isArray(data.devices) ? data.devices : []
+  var out = []
+  for (var i = 0; i < devices.length && out.length < MAX_DEVICES; i++) {
+    var d = devices[i]
+    if (!d || typeof d !== "object" || !d.battery || typeof d.battery !== "object") continue
+    var vendor = String(d.id_vendor || "").match(/^0x([0-9a-f]{4})$/i)
+    var product = String(d.id_product || "").match(/^0x([0-9a-f]{4})$/i)
+    if (!vendor || !product) continue
+    var level = Number(d.battery.level)
+    var tte = Number(d.battery.time_to_empty_min)
+    var name = typeof d.product === "string" && d.product.trim() ? d.product
+      : (typeof d.device === "string" ? d.device : "")
+    out.push({
+      vendor: vendor[1].toLowerCase(),
+      product: product[1].toLowerCase(),
+      name: name.trim().slice(0, MAX_NAME),
+      status: String(d.battery.status || "UNKNOWN"),
+      level: isFinite(level) ? level : -1,
+      timeToEmptyMin: isFinite(tte) && tte > 0 ? tte : 0
+    })
+  }
+  return out
+}
+
+function headsetHasReading(entry) {
+  return !!entry && entry.level >= 0
+    && (entry.status === "BATTERY_AVAILABLE" || entry.status === "BATTERY_CHARGING")
+}
+
+// A headset switched off keeps its dongle plugged in and reports
+// BATTERY_UNAVAILABLE: keep its last level, like a sleeping Razer device.
+function carryHeadset(previous, next) {
+  return carryLast(previous, next, headsetHasReading)
+}
+
 function fromHeadset(entry, lowThreshold) {
-  return null
+  if (!headsetHasReading(entry)) return null
+  var percent = clampPercent(entry.level)
+  var state = entry.status === "BATTERY_CHARGING" ? (percent >= 100 ? "full" : "charging") : "discharging"
+  return {
+    key: "headset:" + entry.vendor + ":" + entry.product,
+    name: entry.name || "Headset",
+    kind: "headset",
+    percent: percent,
+    state: state,
+    timeToEmpty: state === "discharging" && !entry.stale ? entry.timeToEmptyMin * 60 : 0,
+    source: "headsetcontrol",
+    low: state === "discharging" && isLow(percent, lowThreshold),
+    stale: entry.stale === true
+  }
 }
 
 // ------------------------------------------------------------------- merging
@@ -178,8 +247,8 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     clampPercent: clampPercent, macFrom: macFrom,
     fromUPower: fromUPower, fromBluez: fromBluez,
-    parseOpenRazer: parseOpenRazer, carryOpenRazer: carryOpenRazer,
-    fromOpenRazer: fromOpenRazer, fromHeadset: fromHeadset,
+    parseOpenRazer: parseOpenRazer, carryOpenRazer: carryOpenRazer, fromOpenRazer: fromOpenRazer,
+    parseHeadset: parseHeadset, carryHeadset: carryHeadset, fromHeadset: fromHeadset,
     dedupe: dedupe, sort: sort, merge: merge, groupOf: groupOf,
     batteryIcon: batteryIcon, isLow: isLow
   }
