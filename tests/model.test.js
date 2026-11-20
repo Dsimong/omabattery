@@ -33,7 +33,8 @@ test("sort puts the lowest battery first", () => {
 test("groupOf", () => {
   assert.strictEqual(M.groupOf("mouse"), "input")
   assert.strictEqual(M.groupOf("headset"), "audio")
-  assert.strictEqual(M.groupOf("tablet"), "other")
+  assert.strictEqual(M.groupOf("tablet"), "input") // UPower: graphics tablets (Wacom)
+  assert.strictEqual(M.groupOf("other"), "other")
 })
 
 // ------------------------------------------------------------------ OpenRazer
@@ -214,4 +215,66 @@ test("merge lists Razer and headset devices together, lowest first", () => {
   const out = M.merge([razer, heads])
   assert.deepStrictEqual(out.map(d => d.percent), [10, 15, 40, 85, 100])
   assert.strictEqual(M.groupOf(out[3].kind), "audio")
+})
+
+// -------------------------------------------------------------------- UPower
+
+const UPOWER = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/upower.json"), "utf8"))
+const upower = UPOWER.map(s => M.fromUPower(s, 20))
+
+test("fromUPower skips the system's own power and devices not ready", () => {
+  assert.deepStrictEqual(upower.map(d => d && d.key), [
+    "upower:hidpp_battery_0",
+    "mac:aa:bb:cc:dd:ee:01",
+    "mac:aa:bb:cc:dd:ee:02",
+    "mac:aa:bb:cc:dd:ee:03",
+    null, null, null,
+  ])
+})
+
+test("fromUPower normalizes a Logitech receiver mouse", () => {
+  assert.deepStrictEqual(upower[0], {
+    key: "upower:hidpp_battery_0", name: "MX Master 3S", kind: "mouse",
+    percent: 55, state: "discharging", timeToEmpty: 0, source: "upower",
+    low: false, stale: false,
+  })
+})
+
+test("fromUPower: unknown state can be low, charging cannot", () => {
+  assert.strictEqual(upower[1].state, "unknown")
+  assert.strictEqual(M.fromUPower({ ...UPOWER[1], percentage: 0.15 }, 20).low, true)
+  assert.strictEqual(upower[3].state, "charging")
+  assert.strictEqual(upower[3].low, false)
+})
+
+test("fromUPower: time left only while discharging, default name by kind", () => {
+  assert.strictEqual(upower[2].timeToEmpty, 1800)
+  assert.strictEqual(upower[2].low, true)
+  assert.strictEqual(upower[2].name, "Controller")
+  assert.strictEqual(M.fromUPower({ ...UPOWER[0], state: "charging", timeToEmpty: 99 }, 20).timeToEmpty, 0)
+})
+
+test("fromUPower: odd input", () => {
+  assert.strictEqual(M.fromUPower(null, 20), null)
+  assert.strictEqual(M.fromUPower({ ...UPOWER[0], percentage: "x" }, 20), null)
+  assert.strictEqual(M.fromUPower({ ...UPOWER[0], nativePath: "" }, 20), null)
+  assert.strictEqual(M.fromUPower({ ...UPOWER[0], state: "bogus" }, 20).state, "unknown")
+  assert.strictEqual(M.fromUPower({ ...UPOWER[0], kind: "ups" }, 20), null)
+  assert.strictEqual(M.fromUPower({ ...UPOWER[0], model: "z".repeat(300) }, 20).name.length, 64)
+  assert.strictEqual(M.fromUPower({ ...UPOWER[0], percentage: 1.7 }, 20).percent, 100)
+})
+
+test("merge: UPower wins over another source for the same key", () => {
+  const fromBluez = { ...upower[1], source: "bluez", percent: 79 }
+  const out = M.merge([[fromBluez], upower])
+  const headphones = out.filter(d => d.key === "mac:aa:bb:cc:dd:ee:01")
+  assert.strictEqual(headphones.length, 1)
+  assert.strictEqual(headphones[0].source, "upower")
+})
+
+test("groupOf covers the UPower kinds", () => {
+  assert.strictEqual(M.groupOf("gamepad"), "input")
+  assert.strictEqual(M.groupOf("pen"), "input")
+  assert.strictEqual(M.groupOf("audio"), "audio")
+  assert.strictEqual(M.groupOf("phone"), "other")
 })

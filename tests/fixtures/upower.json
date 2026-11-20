@@ -1,0 +1,44 @@
+[
+  {
+    "_case": "Logitech mouse on a Bolt/Unifying receiver (hid-logitech-hidpp)",
+    "ready": true, "kind": "mouse", "state": "discharging", "percentage": 0.55,
+    "timeToEmpty": 0, "powerSupply": false, "isLaptopBattery": false,
+    "nativePath": "hidpp_battery_0", "model": "MX Master 3S"
+  },
+  {
+    "_case": "Bluetooth headphones through BlueZ, no charge state reported",
+    "ready": true, "kind": "headphones", "state": "unknown", "percentage": 0.8,
+    "timeToEmpty": 0, "powerSupply": false, "isLaptopBattery": false,
+    "nativePath": "/org/bluez/hci0/dev_AA_BB_CC_DD_EE_01", "model": "Example Headphones"
+  },
+  {
+    "_case": "Gamepad low on battery, with a time estimate",
+    "ready": true, "kind": "gamepad", "state": "discharging", "percentage": 0.1,
+    "timeToEmpty": 1800.4, "powerSupply": false, "isLaptopBattery": false,
+    "nativePath": "ps-controller-battery-aa:bb:cc:dd:ee:02", "model": ""
+  },
+  {
+    "_case": "Keyboard charging, low but charging is never low",
+    "ready": true, "kind": "keyboard", "state": "charging", "percentage": 0.12,
+    "timeToEmpty": 0, "powerSupply": false, "isLaptopBattery": false,
+    "nativePath": "hid-aa:bb:cc:dd:ee:03-battery", "model": "Example Keyboard"
+  },
+  {
+    "_case": "Laptop battery: the system's own, skipped",
+    "ready": true, "kind": "other", "state": "discharging", "percentage": 0.5,
+    "timeToEmpty": 7200, "powerSupply": true, "isLaptopBattery": true,
+    "nativePath": "BAT0", "model": "Example Laptop Battery"
+  },
+  {
+    "_case": "AC adapter: skipped",
+    "ready": true, "kind": "linepower", "state": "unknown", "percentage": 0,
+    "timeToEmpty": 0, "powerSupply": true, "isLaptopBattery": false,
+    "nativePath": "AC", "model": ""
+  },
+  {
+    "_case": "Not ready yet (properties still loading): skipped",
+    "ready": false, "kind": "mouse", "state": "unknown", "percentage": 0,
+    "timeToEmpty": 0, "powerSupply": false, "isLaptopBattery": false,
+    "nativePath": "hidpp_battery_1", "model": ""
+  }
+]

@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.UPower
 import "Model.js" as Model
 
 // Single aggregator for the whole shell.
@@ -38,14 +39,74 @@ Item {
 
   readonly property string binDir: Qt.resolvedUrl("bin").toString().replace(/^file:\/\//, "")
 
-  // TODO(roadmap 1): UPower.devices (filter !powerSupply) -> Model.fromUPower.
+  // ------------------------------------------------------------------ UPower
+  //
+  // Event driven, no polling: this binding reads UPower.devices.values and
+  // every property it uses on each device, so QML re-evaluates it when a
+  // device appears or leaves and when any of those properties changes.
+  readonly property var upowerDevices: {
+    var list = UPower.devices.values
+    var out = []
+    for (var i = 0; i < list.length && i < 64; i++) {
+      var d = list[i]
+      if (!d) continue
+      var dev = Model.fromUPower({
+        ready: d.ready,
+        kind: root.upowerKind(d.type),
+        state: root.upowerState(d.state),
+        percentage: d.percentage,
+        timeToEmpty: d.timeToEmpty,
+        powerSupply: d.powerSupply,
+        isLaptopBattery: d.isLaptopBattery,
+        nativePath: d.nativePath,
+        model: d.model
+      }, root.lowThreshold)
+      if (dev) out.push(dev)
+    }
+    return out
+  }
+  onUpowerDevicesChanged: rebuild()
+
+  // Quickshell enums -> Model.js strings. By symbol, not by number, so a
+  // reordered enum cannot shift every kind by one.
+  function upowerKind(type) {
+    switch (type) {
+    case UPowerDeviceType.Mouse: return "mouse"
+    case UPowerDeviceType.Keyboard: return "keyboard"
+    case UPowerDeviceType.Touchpad: return "touchpad"
+    case UPowerDeviceType.GamingInput: return "gamepad"
+    case UPowerDeviceType.Pen: return "pen"
+    case UPowerDeviceType.Tablet: return "tablet"
+    case UPowerDeviceType.Headset: return "headset"
+    case UPowerDeviceType.Headphones: return "headphones"
+    case UPowerDeviceType.Speakers: return "speaker"
+    case UPowerDeviceType.OtherAudio: return "audio"
+    case UPowerDeviceType.Phone: return "phone"
+    case UPowerDeviceType.LinePower: return "linepower"
+    case UPowerDeviceType.Ups: return "ups"
+    default: return "other"
+    }
+  }
+
+  function upowerState(state) {
+    switch (state) {
+    case UPowerDeviceState.Charging:
+    case UPowerDeviceState.PendingCharge: return "charging"
+    case UPowerDeviceState.Discharging:
+    case UPowerDeviceState.PendingDischarge:
+    case UPowerDeviceState.Empty: return "discharging"
+    case UPowerDeviceState.FullyCharged: return "full"
+    default: return "unknown"
+    }
+  }
+
   // TODO(roadmap 2): Bluetooth.devices with batteryAvailable, dedupe by MAC.
   // TODO(roadmap 4): low-battery notification, once per threshold crossing.
   function rebuild() {
     var threshold = root.lowThreshold
     var openrazer = root.openrazerEntries.map(function(e) { return Model.fromOpenRazer(e, threshold) })
     var headsets = root.headsetEntries.map(function(e) { return Model.fromHeadset(e, threshold) })
-    var next = Model.merge([openrazer, headsets])
+    var next = Model.merge([root.upowerDevices, openrazer, headsets])
     if (next.length !== root.devices.length)
       console.log("[omabattery] devices: " + next.length)
     root.devices = next
