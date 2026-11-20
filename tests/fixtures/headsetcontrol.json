@@ -1,0 +1,61 @@
+{
+  "name": "HeadsetControl",
+  "version": "4.1.0",
+  "api_version": "1.9",
+  "hidapi_version": "0.14.0",
+  "device_count": 6,
+  "devices": [
+    {
+      "status": "success",
+      "device": "Logitech G633/G635/G733/G933/G935",
+      "vendor": "Logitech",
+      "product": "G733 Gaming Headset",
+      "id_vendor": "0x046d",
+      "id_product": "0x0ab5",
+      "capabilities": ["CAP_SIDETONE", "CAP_BATTERY_STATUS", "CAP_LIGHTS"],
+      "capabilities_str": ["sidetone", "battery", "lights"],
+      "battery": { "status": "BATTERY_AVAILABLE", "level": 85 }
+    },
+    {
+      "status": "success",
+      "device": "Example Charging Headset",
+      "vendor": "Example",
+      "product": "",
+      "id_vendor": "0x1038",
+      "id_product": "0x2202",
+      "battery": { "status": "BATTERY_CHARGING", "level": 40, "time_to_full_min": 90 }
+    },
+    {
+      "status": "partial",
+      "device": "Example Headset Turned Off",
+      "vendor": "Example",
+      "product": "Headset Off",
+      "id_vendor": "0x03F0",
+      "id_product": "0x098D",
+      "battery": { "status": "BATTERY_UNAVAILABLE", "level": -1 },
+      "errors": { "battery": "Headset is turned off" }
+    },
+    {
+      "status": "success",
+      "device": "Example Low Headset",
+      "vendor": "Example",
+      "product": "Low Headset",
+      "id_vendor": "0x1b1c",
+      "id_product": "0x0a14",
+      "battery": { "status": "BATTERY_AVAILABLE", "level": 15, "time_to_empty_min": 120 }
+    },
+    {
+      "status": "success",
+      "device": "Example Without Battery",
+      "id_vendor": "0x1234",
+      "id_product": "0x5678"
+    },
+    {
+      "status": "success",
+      "device": "Example Bad Ids",
+      "id_vendor": "046d",
+      "id_product": "0x0ab5",
+      "battery": { "status": "BATTERY_AVAILABLE", "level": 50 }
+    }
+  ]
+}

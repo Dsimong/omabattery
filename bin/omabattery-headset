@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
-# Wrapper around headsetcontrol -> normalized JSON on stdout.
-# Prints {"devices":[]} when headsetcontrol is missing or finds nothing,
-# so Service.qml never has to special-case a failure.
-set -euo pipefail
+# USB-dongle headsets through HeadsetControl (https://github.com/Sapd/HeadsetControl).
+# Prints the raw `headsetcontrol -o json` output, parsed by Model.parseHeadset.
+# Prints {"devices":[]} when headsetcontrol is missing, hangs or prints
+# nothing, so Service.qml never has to special-case a failure.
+#
+# Talking to the dongle needs the udev rules the headsetcontrol package
+# installs; they apply after replugging the dongle (or a reboot).
+set -u
+
+empty='{"devices":[]}'
 
 if ! command -v headsetcontrol >/dev/null 2>&1; then
-  echo '{"devices":[]}'
+  echo "$empty"
   exit 0
 fi
 
-# TODO(roadmap 3): normalize `headsetcontrol -o json` with jq into
-#   {"devices":[{"name":..., "percent":..., "state":...}]}
-raw="$(headsetcontrol -o json 2>/dev/null || true)"
-if [[ -z "$raw" ]]; then
-  echo '{"devices":[]}'
+# headsetcontrol may exit non-zero and still print valid JSON (no device).
+out=$(timeout 5 headsetcontrol -o json 2>/dev/null) || true
+if [[ -z "$out" ]]; then
+  echo "$empty"
 else
-  printf '%s\n' "$raw"
+  printf '%s\n' "$out"
 fi

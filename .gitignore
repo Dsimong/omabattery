@@ -1,4 +1,35 @@
+# Everything committed here is what `omarchy plugin add` installs on other
+# machines: keep the repo to the plugin itself.
+
+# Dependencies
 node_modules/
+
+# Editors and QML language server (qmlls writes machine-specific paths)
+.qmlls.ini
+.vscode/
+.idea/
+*.swp
+*~
+
+# Qt compiled caches
+*.qmlc
+*.jsc
+
+# Claude Code local state (CLAUDE.md and .claude/settings.json can be shared)
+.claude/settings.local.json
+.claude/worktrees/
+
+# Logs and local captures: real upower/openrazer/headsetcontrol output carries
+# MACs and serial numbers. Save raw captures as *.local.* and commit only
+# anonymized fixtures.
+*.log
+*.qslog
+*.local.*
+
+# Backups and OS noise
 *.bak
 *.bak.*
 .DS_Store
+
+# Stray binaries that are not part of the plugin
+/lazygit

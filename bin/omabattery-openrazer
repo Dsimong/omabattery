@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Razer devices with a battery, as exposed by the OpenRazer kernel driver
+# (openrazer-driver-dkms). Reading needs the `openrazer` group, which the
+# OpenRazer install adds the user to; no daemon involved.
+#
+# One device per line, tab separated, parsed by Model.parseOpenRazer:
+#   driver  hid_id  charge_level(0-255)  charge_status(0|1)  device_type
+#
+# Prints nothing when there is no Razer device or no driver loaded.
+set -u
+shopt -s nullglob
+
+for level_file in /sys/bus/hid/drivers/razer{mouse,kbd,accessory}/*/charge_level; do
+  dir=${level_file%/charge_level}
+  driver=$(basename "$(dirname "$dir")")
+  hid_id=$(basename "$dir")
+
+  # Each read is a USB request to the device through its receiver.
+  level=$(timeout 2 cat "$level_file" 2>/dev/null) || continue
+  status=$(timeout 2 cat "$dir/charge_status" 2>/dev/null) || status=""
+  name=$(timeout 2 cat "$dir/device_type" 2>/dev/null | tr -d '\t\r\n') || name=""
+
+  printf '%s\t%s\t%s\t%s\t%s\n' "$driver" "$hid_id" "$level" "$status" "$name"
+done

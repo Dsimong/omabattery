@@ -1,0 +1,8 @@
+razermouse	0003:1532:00DF.0006	26	0	Razer Viper V3 Pro SE
+razermouse	0003:1532:00DF.0007	26	0	Razer Viper V3 Pro SE
+razerkbd	0003:1532:0258.0010	255	1	Razer BlackWidow V4 Pro
+razeraccessory	0003:1532:0F1A.0003	0	0	Razer Mouse Dock Pro
+razerkraken	0003:1532:0527.0004	200	0	Razer Kraken
+razermouse	not-a-hid-id	100	0	Bad id
+razermouse	0003:1532:00C1.0009		0	Empty level
+garbage line without tabs
