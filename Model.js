@@ -261,6 +261,94 @@ function groupOf(kind) {
   }
 }
 
+// ------------------------------------------------------------- bar selection
+
+// Which device the bar icon follows, the widget's `device` setting:
+//   "auto" (the lowest battery) | "none" (no device) | a device key.
+var SELECTION_AUTO = "auto"
+var SELECTION_NONE = "none"
+var MAX_KEY = 128
+
+function normalizeSelection(value) {
+  var s = value === undefined || value === null ? "" : String(value).trim()
+  return s === "" ? SELECTION_AUTO : s.slice(0, MAX_KEY)
+}
+
+// barLabel was "Lowest" before the bar could follow any device; it is the
+// percentage of whichever device the bar shows now.
+function normalizeBarLabel(value) {
+  var s = String(value || "")
+  if (s === "Lowest") return "Percent"
+  return s === "None" || s === "Count" ? s : "Percent"
+}
+
+// Order the wheel walks: auto, every device by name, none. By name rather
+// than by level, so the order holds still while batteries drain.
+function selectionCycle(devices) {
+  var keyed = (devices || []).filter(function(d) { return d && d.key })
+  keyed.sort(function(a, b) {
+    var byName = String(a.name).localeCompare(String(b.name))
+    if (byName !== 0) return byName
+    return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)
+  })
+  return [SELECTION_AUTO].concat(keyed.map(function(d) { return d.key }), [SELECTION_NONE])
+}
+
+// `steps` places along the cycle from `current`. The wheel holds at either
+// end, so a long touchpad swipe stops there; a click wraps around. A pinned
+// device that is not connected now counts as auto.
+function stepSelection(devices, current, steps, wrap) {
+  var cycle = selectionCycle(devices)
+  var i = cycle.indexOf(normalizeSelection(current))
+  if (i < 0) i = 0
+  var n = cycle.length
+  var j = i + Math.trunc(Number(steps) || 0)
+  j = wrap ? ((j % n) + n) % n : Math.max(0, Math.min(n - 1, j))
+  return cycle[j]
+}
+
+// What the bar shows for a selection, over the merged (lowest first) list:
+//   { mode: "auto" | "device" | "none" | "missing", device: normalized | null }
+// "missing" is a pinned device that is not connected or has no reading yet.
+function resolveSelection(devices, selection) {
+  var list = devices || []
+  var s = normalizeSelection(selection)
+  if (s === SELECTION_NONE) return { mode: "none", device: null }
+  if (s === SELECTION_AUTO) return { mode: "auto", device: list.length > 0 ? list[0] : null }
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] && list[i].key === s) return { mode: "device", device: list[i] }
+  }
+  return { mode: "missing", device: null }
+}
+
+// The panel's keyboard targets, top to bottom: one per device row (in the
+// order the panel lists them), then Lowest, None and the reactive color toggle.
+function panelTargets(devices) {
+  var rows = (devices || []).map(function(d) { return { kind: "device", key: d ? d.key : "" } })
+  return rows.concat([{ kind: "auto" }, { kind: "none" }, { kind: "reactive" }])
+}
+
+// Where the panel cursor lands on open: on what the bar shows now. A pinned
+// device that is gone lands on Lowest, the way back.
+function selectionTargetIndex(devices, selection) {
+  var list = devices || []
+  var s = normalizeSelection(selection)
+  if (s === SELECTION_NONE) return list.length + 1
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] && list[i].key === s) return i
+  }
+  return list.length
+}
+
+// Fills %1, %2… in one pass. Chained .arg() would also expand a "%2" that a
+// device reports inside its own name.
+function fill(template, values) {
+  return String(template).replace(/%(\d)/g, function(match, n) {
+    var v = values[Number(n) - 1]
+    return v === undefined ? match : String(v)
+  })
+}
+
 // ---------------------------------------------------------------------- icons
 
 // Nerd Font Material Design battery glyphs, the same set omarchy.power uses.
@@ -290,6 +378,10 @@ if (typeof module !== "undefined" && module.exports) {
     parseOpenRazer: parseOpenRazer, carryOpenRazer: carryOpenRazer, fromOpenRazer: fromOpenRazer,
     parseHeadset: parseHeadset, carryHeadset: carryHeadset, fromHeadset: fromHeadset,
     dedupe: dedupe, sort: sort, merge: merge, groupOf: groupOf,
+    normalizeSelection: normalizeSelection, normalizeBarLabel: normalizeBarLabel,
+    selectionCycle: selectionCycle, stepSelection: stepSelection,
+    resolveSelection: resolveSelection, fill: fill,
+    panelTargets: panelTargets, selectionTargetIndex: selectionTargetIndex,
     batteryIcon: batteryIcon, isLow: isLow
   }
 }

@@ -21,7 +21,9 @@
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
-      "barLabel": "Lowest",
+      "barLabel": "Percent",
+      "device": "auto",
+      "reactiveColor": true,
       "lowThreshold": 20,
       "headsetcontrol": true,
       "pollSeconds": 60,
@@ -34,10 +36,24 @@
         "label": "Bar label",
         "options": [
           "None",
-          "Lowest",
+          "Percent",
           "Count"
         ],
-        "defaultValue": "Lowest"
+        "defaultValue": "Percent",
+        "description": "Percent shows the level of the device on the bar; Count, how many devices have a battery."
+      },
+      {
+        "key": "device",
+        "type": "string",
+        "label": "Device on the bar",
+        "defaultValue": "auto",
+        "description": "auto (lowest battery), none, or a device key. Scroll over the icon, or middle-click it, to change it."
+      },
+      {
+        "key": "reactiveColor",
+        "type": "boolean",
+        "label": "Icon color reacts to battery",
+        "defaultValue": true
       },
       {
         "key": "lowThreshold",
