@@ -10,7 +10,6 @@ Logitech Unifying/Bolt, USB gaming headsets) in a single panel with battery bars
 | Source | Covers |
 |---|---|
 | UPower | Bluetooth with Battery Service, Logitech Unifying/Bolt, kernel `power_supply` peripherals |
-| BlueZ | Bluetooth devices with `batteryAvailable` that UPower does not expose |
 | OpenRazer | Razer wireless mice/keyboards (HyperSpeed receivers) via the `openrazer-driver-dkms` kernel driver |
 | HeadsetControl (optional) | USB-dongle gaming headsets (SteelSeries, HyperX, Logitech G, Corsair…) |
 
@@ -43,8 +42,9 @@ omarchy plugin enable dsimong.omabattery
 
 ## Notes
 
-- Some Bluetooth headphones only expose battery when BlueZ experimental
-  features are on: `Experimental = true` in `/etc/bluetooth/main.conf`.
+- Some Bluetooth headphones only report their battery to UPower when the
+  Bluetooth daemon's experimental features are on: `Experimental = true` in
+  `/etc/bluetooth/main.conf`.
 - USB-dongle headsets need HeadsetControl: `omarchy pkg add headsetcontrol`.
   Its package ships udev rules that give your user access to the dongle; they
   apply after replugging it (or rebooting). Without the binary, or with the
