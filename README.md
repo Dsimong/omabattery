@@ -38,7 +38,17 @@ omarchy plugin enable dsimong.omabattery
 | `lowThreshold` | `20` | Low battery threshold (%) |
 | `headsetcontrol` | `true` | Query USB headsets with `headsetcontrol` |
 | `pollSeconds` | `60` | How often OpenRazer and HeadsetControl are asked (UPower needs no polling) |
-| `notifyLow` | `true` | Notify once per threshold crossing |
+| `notifyLow` | `true` | Notify when a device drops to the threshold, see below |
+
+## Low battery notification
+
+A device that drops to `lowThreshold` while discharging gets one
+notification. It warns again only after charging, or after climbing 5 points
+above the threshold, so a level wobbling around it does not keep notifying.
+A device that is asleep or switched off (showing its last known level) does
+not notify, and one that reconnects at the same low level does not notify
+twice. The check waits a few seconds after the shell starts, so it uses your
+threshold rather than the default. It starts over when the shell restarts.
 
 ## Notes
 

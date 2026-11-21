@@ -137,6 +137,92 @@ test("batteryIcon picks the glyph by level and charging", () => {
   assert.strictEqual(cp(M.batteryIcon({ percent: 100, state: "full" })), "f0085")
 })
 
+// --------------------------------------------------------- low-battery alerts
+
+const dev = (percent, extra) => Object.assign({
+  key: "openrazer:1532:00df", name: "Razer Viper V3 Pro SE", percent: percent,
+  state: "discharging", low: percent <= 20, stale: false,
+}, extra)
+const keysOf = r => r.alerts.map(d => d.key)
+
+test("lowAlerts warns once per drop below the threshold", () => {
+  let r = M.lowAlerts([dev(50)], {}, 20)
+  assert.deepStrictEqual(keysOf(r), [])
+  r = M.lowAlerts([dev(20)], r.notified, 20)
+  assert.deepStrictEqual(keysOf(r), ["openrazer:1532:00df"])
+  r = M.lowAlerts([dev(15)], r.notified, 20)
+  assert.deepStrictEqual(keysOf(r), [])
+})
+
+test("lowAlerts re-arms only after charging or climbing 5 points above", () => {
+  let r = M.lowAlerts([dev(19)], {}, 20)
+  assert.strictEqual(r.alerts.length, 1)
+  // Wobbling around the threshold does not warn again.
+  r = M.lowAlerts([dev(23)], r.notified, 20)
+  r = M.lowAlerts([dev(19)], r.notified, 20)
+  assert.strictEqual(r.alerts.length, 0)
+  // Climbing past threshold + 5 re-arms.
+  r = M.lowAlerts([dev(26)], r.notified, 20)
+  r = M.lowAlerts([dev(19)], r.notified, 20)
+  assert.strictEqual(r.alerts.length, 1)
+  // So does charging, even at a low level.
+  r = M.lowAlerts([dev(12, { state: "charging", low: false })], r.notified, 20)
+  r = M.lowAlerts([dev(12)], r.notified, 20)
+  assert.strictEqual(r.alerts.length, 1)
+})
+
+test("lowAlerts: stale readings neither warn nor re-arm", () => {
+  let r = M.lowAlerts([dev(10, { stale: true })], {}, 20)
+  assert.strictEqual(r.alerts.length, 0)
+  r = M.lowAlerts([dev(10)], r.notified, 20)
+  assert.strictEqual(r.alerts.length, 1)
+  r = M.lowAlerts([dev(90, { stale: true, low: false })], r.notified, 20)
+  r = M.lowAlerts([dev(10)], r.notified, 20)
+  assert.strictEqual(r.alerts.length, 0)
+})
+
+test("lowAlerts: a device that leaves and comes back low does not warn twice", () => {
+  let r = M.lowAlerts([dev(10)], {}, 20)
+  r = M.lowAlerts([], r.notified, 20)
+  r = M.lowAlerts([dev(9)], r.notified, 20)
+  assert.strictEqual(r.alerts.length, 0)
+})
+
+test("lowAlerts: one alert per device, several at once", () => {
+  const headset = dev(5, { key: "headset:046d:0ab5", name: "G733" })
+  const r = M.lowAlerts([headset, dev(15), dev(80, { key: "upower:hidpp_battery_0" })], {}, 20)
+  assert.deepStrictEqual(keysOf(r), ["headset:046d:0ab5", "openrazer:1532:00df"])
+})
+
+test("lowAlerts does not change the state it is given", () => {
+  const before = { "openrazer:1532:00df": true }
+  M.lowAlerts([dev(90)], before, 20)
+  assert.deepStrictEqual(before, { "openrazer:1532:00df": true })
+})
+
+test("lowAlerts: odd input and the bound on remembered devices", () => {
+  assert.deepStrictEqual(M.lowAlerts(null, null, 20), { alerts: [], notified: {} })
+  assert.deepStrictEqual(M.lowAlerts([null, { low: true }], {}, 20).alerts, [])
+  const many = {}
+  for (let i = 0; i < 70; i++) many["upower:gone_" + i] = true
+  const r = M.lowAlerts([dev(10)], many, 20)
+  assert.deepStrictEqual(Object.keys(r.notified), ["openrazer:1532:00df"])
+})
+
+test("lowBatteryBody fills name and percent in one pass", () => {
+  assert.strictEqual(M.lowBatteryBody("%1 is at %2%", "G733", "15"), "G733 is at 15%")
+  assert.strictEqual(M.lowBatteryBody("%1 está al %2%", "Odd %2 name", "7"), "Odd %2 name está al 7%")
+  assert.strictEqual(M.lowBatteryBody("%1 is at %2%", "", "7"), "Device is at 7%")
+})
+
+test("lowBatteryBody drops what the daemon would read as markup", () => {
+  const body = M.lowBatteryBody("%1 is at %2%", "<a href=\"https://example.invalid\">Mouse</a> &lt;b&gt;", "5")
+  assert.ok(!/[<>&]/.test(body), body)
+  assert.strictEqual(body, "a href=\"https://example.invalid\"Mouse/a lt;bgt; is at 5%")
+  assert.strictEqual(M.lowBatteryBody("%1", "Tab\there\nnew", "5"), "Tabherenew")
+  assert.strictEqual(M.lowBatteryBody("%1", "x".repeat(200), "5").length, 64)
+})
+
 // ------------------------------------------------------------- HeadsetControl
 
 const HEADSETS = fs.readFileSync(path.join(__dirname, "fixtures/headsetcontrol.json"), "utf8")

@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
+import qs.Commons as Commons
 import "Model.js" as Model
 
 // Single aggregator for the whole shell.
@@ -101,7 +102,6 @@ Item {
   }
 
   // TODO(roadmap 2): Bluetooth.devices with batteryAvailable, dedupe by MAC.
-  // TODO(roadmap 4): low-battery notification, once per threshold crossing.
   function rebuild() {
     var threshold = root.lowThreshold
     var openrazer = root.openrazerEntries.map(function(e) { return Model.fromOpenRazer(e, threshold) })
@@ -170,5 +170,61 @@ Item {
     repeat: true
     triggeredOnStart: true
     onTriggered: root.refresh()
+  }
+
+  // ------------------------------------------------------------- low battery
+  //
+  // One notification per drop below the threshold (Model.lowAlerts). The
+  // devices already warned about are tracked even with notifyLow off, so
+  // turning it on does not fire for a drop that happened before.
+  property var lowNotified: ({})
+
+  // Held back while the shell starts, so the first check uses the threshold
+  // the bar pushes instead of this file's default, and sees the first answer
+  // from OpenRazer and HeadsetControl.
+  property bool lowAlertsReady: false
+
+  readonly property string notifySend: root.omarchyPath !== ""
+    ? root.omarchyPath + "/bin/omarchy-notification-send" : "omarchy-notification-send"
+
+  Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
+
+  onDevicesChanged: checkLow()
+
+  Timer {
+    interval: 5000
+    running: true
+    onTriggered: {
+      root.lowAlertsReady = true
+      root.checkLow()
+    }
+  }
+
+  function checkLow() {
+    if (!root.lowAlertsReady) return
+    var result = Model.lowAlerts(root.devices, root.lowNotified, root.lowThreshold)
+    root.lowNotified = result.notified
+    if (!root.notifyLow) return
+    for (var i = 0; i < result.alerts.length; i++) notifyLowBattery(result.alerts[i])
+  }
+
+  // Same call as Omarchy's own low-battery warning (omarchy-battery-low). It
+  // takes each value as one D-Bus argument, never as options; the body is
+  // made safe for the daemon's markup in Model.lowBatteryBody.
+  function notifyLowBattery(device) {
+    var body = Model.lowBatteryBody(strings.t("notify.low.body"), device.name,
+                                    Commons.I18n.formatNumber(device.percent))
+    // Source only: keys can carry a Bluetooth MAC.
+    console.log("[omabattery] low battery: " + device.source + " " + device.percent + "%")
+    Quickshell.execDetached([
+      root.notifySend,
+      "--app-name", "Omabattery",
+      "-g", Model.batteryIcon(device),
+      "-u", "normal",
+      "-i", "battery-caution",
+      "-t", "30000",
+      strings.t("notify.low.title"),
+      body
+    ])
   }
 }
