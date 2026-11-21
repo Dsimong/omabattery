@@ -101,7 +101,6 @@ Item {
     }
   }
 
-  // TODO(roadmap 2): Bluetooth.devices with batteryAvailable, dedupe by MAC.
   function rebuild() {
     var threshold = root.lowThreshold
     var openrazer = root.openrazerEntries.map(function(e) { return Model.fromOpenRazer(e, threshold) })

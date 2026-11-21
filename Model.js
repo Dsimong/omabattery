@@ -4,10 +4,12 @@
 //
 // Normalized device:
 //   { key, name, kind, percent /*0-100*/, state /*charging|discharging|full|unknown*/,
-//     timeToEmpty /*s|0*/, source /*upower|bluez|openrazer|headsetcontrol*/, low /*bool*/,
+//     timeToEmpty /*s|0*/, source /*upower|openrazer|headsetcontrol*/, low /*bool*/,
 //     stale /*bool: last known reading, device asleep*/ }
 
-var SOURCE_PRIORITY = { upower: 0, bluez: 1, openrazer: 2, headsetcontrol: 3 }
+// The same key from two sources keeps the lower number. Keys carry their
+// source today, so this only decides once two sources can see one device.
+var SOURCE_PRIORITY = { upower: 0, openrazer: 1, headsetcontrol: 2 }
 
 var MAX_NAME = 64
 var MAX_DEVICES = 32
@@ -40,8 +42,9 @@ var DEFAULT_NAMES = {
 //   { ready, kind, state /*charging|discharging|full|unknown*/, percentage /*0-1*/,
 //     timeToEmpty /*s*/, powerSupply, isLaptopBattery, nativePath, model }
 // powerSupply/isLaptopBattery are the system's own batteries: skipped. The key
-// is the MAC when nativePath carries one (Bluetooth, BT HID), so BlueZ can
-// later dedupe against it; otherwise the nativePath (hidpp_battery_0, …).
+// is the MAC when nativePath carries one (Bluetooth, BT HID), so a device UPower
+// lists twice (its Bluetooth battery and its HID battery) shows once;
+// otherwise the nativePath (hidpp_battery_0, …).
 function fromUPower(s, lowThreshold) {
   if (!s || !s.ready || s.powerSupply || s.isLaptopBattery || UPOWER_SYSTEM[s.kind]) return null
   var fraction = Number(s.percentage)
@@ -66,11 +69,6 @@ function fromUPower(s, lowThreshold) {
     low: (state === "discharging" || state === "unknown") && isLow(percent, lowThreshold),
     stale: false
   }
-}
-
-// TODO(roadmap 2): map BluetoothDevice (batteryAvailable) -> normalized device.
-function fromBluez(device, lowThreshold) {
-  return null
 }
 
 // ---------------------------------------------------------------- OpenRazer
@@ -439,7 +437,7 @@ function lowBatteryBody(template, name, percent) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     clampPercent: clampPercent, macFrom: macFrom,
-    fromUPower: fromUPower, fromBluez: fromBluez,
+    fromUPower: fromUPower,
     lowAlerts: lowAlerts, lowBatteryBody: lowBatteryBody,
     parseOpenRazer: parseOpenRazer, carryOpenRazer: carryOpenRazer, fromOpenRazer: fromOpenRazer,
     parseHeadset: parseHeadset, carryHeadset: carryHeadset, fromHeadset: fromHeadset,

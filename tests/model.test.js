@@ -10,15 +10,15 @@ test("clampPercent bounds and rounds", () => {
   assert.strictEqual(M.clampPercent("nope"), 0)
 })
 
-test("macFrom reads BlueZ paths and plain addresses", () => {
+test("macFrom reads Bluetooth object paths and plain addresses", () => {
   assert.strictEqual(M.macFrom("/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF"), "aa:bb:cc:dd:ee:ff")
   assert.strictEqual(M.macFrom("AA:BB:CC:DD:EE:FF"), "aa:bb:cc:dd:ee:ff")
   assert.strictEqual(M.macFrom("hidpp_battery_0"), "")
 })
 
-test("dedupe keeps the UPower entry over BlueZ", () => {
+test("dedupe keeps the source with the best priority", () => {
   const out = M.dedupe([
-    { key: "aa:bb", source: "bluez", percent: 50 },
+    { key: "aa:bb", source: "headsetcontrol", percent: 50 },
     { key: "aa:bb", source: "upower", percent: 51 },
   ])
   assert.strictEqual(out.length, 1)
@@ -350,9 +350,17 @@ test("fromUPower: odd input", () => {
   assert.strictEqual(M.fromUPower({ ...UPOWER[0], percentage: 1.7 }, 20).percent, 100)
 })
 
+test("merge: a device UPower lists twice (Bluetooth and HID battery) shows once", () => {
+  const keyboard = UPOWER[3]
+  const viaBluetooth = M.fromUPower({ ...keyboard, nativePath: "/org/bluez/hci0/dev_AA_BB_CC_DD_EE_03" }, 20)
+  const viaHid = M.fromUPower(keyboard, 20)
+  assert.strictEqual(viaBluetooth.key, viaHid.key)
+  assert.strictEqual(M.merge([[viaBluetooth, viaHid]]).length, 1)
+})
+
 test("merge: UPower wins over another source for the same key", () => {
-  const fromBluez = { ...upower[1], source: "bluez", percent: 79 }
-  const out = M.merge([[fromBluez], upower])
+  const other = { ...upower[1], source: "headsetcontrol", percent: 79 }
+  const out = M.merge([[other], upower])
   const headphones = out.filter(d => d.key === "mac:aa:bb:cc:dd:ee:01")
   assert.strictEqual(headphones.length, 1)
   assert.strictEqual(headphones[0].source, "upower")
