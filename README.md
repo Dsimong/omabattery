@@ -27,7 +27,7 @@ its last real reading until it wakes up.
 ## Install
 
 ```bash
-omarchy plugin add <repo-url>
+omarchy plugin add https://github.com/Dsimong/omabattery.git
 omarchy plugin enable dsimong.omabattery
 ```
 
