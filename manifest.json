@@ -2,10 +2,11 @@
   "schemaVersion": 1,
   "id": "dsimong.omabattery",
   "name": "Omabattery",
-  "version": "0.1.0",
-  "author": "David",
+  "version": "0.2.0",
+  "author": "David Simon",
   "description": "Battery of your wireless keyboard, mouse and headphones",
   "license": "MIT",
+  "homepage": "https://github.com/Dsimong/omabattery",
   "kinds": [
     "service",
     "bar-widget"
@@ -73,7 +74,8 @@
       {
         "key": "pollSeconds",
         "type": "integer",
-        "label": "Headset poll (s)",
+        "label": "Poll interval (s)",
+        "description": "How often OpenRazer and HeadsetControl are asked. UPower needs no polling.",
         "min": 15,
         "max": 600,
         "step": 15,
