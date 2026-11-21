@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Services.UPower
 import qs.Ui
 import qs.Commons
 import qs.Commons as Commons
@@ -58,18 +57,6 @@ Panel {
   // this is the best moment to ask the devices again.
   onOpenedChanged: if (opened && service) service.refresh()
 
-  // TODO(roadmap 1): remove once the service builds the UPower list.
-  function debugDump() {
-    var list = UPower.devices.values
-    for (var i = 0; i < list.length; i++) {
-      var d = list[i]
-      console.log("[omabattery] " + JSON.stringify({
-        model: d.model, type: d.type, percentage: d.percentage, state: d.state,
-        timeToEmpty: d.timeToEmpty, powerSupply: d.powerSupply, nativePath: d.nativePath
-      }))
-    }
-  }
-
   BarIconButton {
     id: button
     anchors.fill: parent
@@ -81,7 +68,6 @@ Panel {
     onPressed: function(b) {
       if (b === Qt.RightButton) {
         if (root.service) root.service.refresh()
-        root.debugDump()
       } else {
         root.toggle()
       }

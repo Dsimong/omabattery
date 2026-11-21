@@ -24,9 +24,48 @@ function macFrom(text) {
   return m ? m[0].replace(/_/g, ":").toLowerCase() : ""
 }
 
-// TODO(roadmap 1): map UPowerDevice -> normalized device.
-function fromUPower(device, lowThreshold) {
-  return null
+// ------------------------------------------------------------------- UPower
+
+// Kinds UPower uses for the machine's own power, never a peripheral.
+var UPOWER_SYSTEM = { linepower: true, ups: true }
+
+var DEFAULT_NAMES = {
+  mouse: "Mouse", keyboard: "Keyboard", touchpad: "Touchpad", gamepad: "Controller",
+  pen: "Pen", tablet: "Tablet", headset: "Headset", headphones: "Headphones",
+  speaker: "Speaker", phone: "Phone"
+}
+
+// Plain snapshot of a Quickshell UPowerDevice, built by Service.qml with the
+// enums already turned into strings:
+//   { ready, kind, state /*charging|discharging|full|unknown*/, percentage /*0-1*/,
+//     timeToEmpty /*s*/, powerSupply, isLaptopBattery, nativePath, model }
+// powerSupply/isLaptopBattery are the system's own batteries: skipped. The key
+// is the MAC when nativePath carries one (Bluetooth, BT HID), so BlueZ can
+// later dedupe against it; otherwise the nativePath (hidpp_battery_0, …).
+function fromUPower(s, lowThreshold) {
+  if (!s || !s.ready || s.powerSupply || s.isLaptopBattery || UPOWER_SYSTEM[s.kind]) return null
+  var fraction = Number(s.percentage)
+  if (!isFinite(fraction)) return null
+  var nativePath = String(s.nativePath || "")
+  var mac = macFrom(nativePath)
+  var key = mac ? "mac:" + mac : (nativePath ? "upower:" + nativePath : "")
+  if (!key) return null
+  var kind = s.kind || "other"
+  var state = { charging: 1, discharging: 1, full: 1 }[s.state] ? s.state : "unknown"
+  var percent = clampPercent(fraction * 100)
+  var tte = Number(s.timeToEmpty)
+  return {
+    key: key,
+    name: String(s.model || "").trim().slice(0, MAX_NAME) || DEFAULT_NAMES[kind] || "Device",
+    kind: kind,
+    percent: percent,
+    state: state,
+    timeToEmpty: state === "discharging" && isFinite(tte) && tte > 0 ? Math.round(tte) : 0,
+    source: "upower",
+    // Many peripherals never report charging/discharging: unknown can be low.
+    low: (state === "discharging" || state === "unknown") && isLow(percent, lowThreshold),
+    stale: false
+  }
 }
 
 // TODO(roadmap 2): map BluetoothDevice (batteryAvailable) -> normalized device.
@@ -215,8 +254,9 @@ function merge(lists) {
 // "input" | "audio" | "other" — panel section a device belongs to.
 function groupOf(kind) {
   switch (kind) {
-  case "keyboard": case "mouse": case "touchpad": case "gamepad": return "input"
-  case "headset": case "headphones": case "speaker": return "audio"
+  case "keyboard": case "mouse": case "touchpad": case "gamepad": case "pen": case "tablet":
+    return "input"
+  case "headset": case "headphones": case "speaker": case "audio": return "audio"
   default: return "other"
   }
 }

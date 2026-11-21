@@ -14,6 +14,11 @@ Logitech Unifying/Bolt, USB gaming headsets) in a single panel with battery bars
 | OpenRazer | Razer wireless mice/keyboards (HyperSpeed receivers) via the `openrazer-driver-dkms` kernel driver |
 | HeadsetControl (optional) | USB-dongle gaming headsets (SteelSeries, HyperX, Logitech G, Corsair…) |
 
+UPower needs nothing installed and is event driven: a device appears, leaves
+or changes level in the panel as soon as UPower reports it. The laptop
+battery, AC adapter and UPS are left out; they are the system's, not a
+peripheral's.
+
 OpenRazer is read straight from sysfs (`charge_level`), so it needs the
 driver and membership in the `openrazer` group, not the daemon. A Razer device
 that has gone to sleep reports 0 through its receiver; omabattery keeps showing
@@ -33,7 +38,7 @@ omarchy plugin enable dsimong.omabattery
 | `barLabel` | `Lowest` | `None`, `Lowest` (% of the lowest device) or `Count` |
 | `lowThreshold` | `20` | Low battery threshold (%) |
 | `headsetcontrol` | `true` | Query USB headsets with `headsetcontrol` |
-| `pollSeconds` | `60` | Headset poll interval |
+| `pollSeconds` | `60` | How often OpenRazer and HeadsetControl are asked (UPower needs no polling) |
 | `notifyLow` | `true` | Notify once per threshold crossing |
 
 ## Notes
