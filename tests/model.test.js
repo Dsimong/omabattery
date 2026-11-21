@@ -278,3 +278,88 @@ test("groupOf covers the UPower kinds", () => {
   assert.strictEqual(M.groupOf("audio"), "audio")
   assert.strictEqual(M.groupOf("phone"), "other")
 })
+
+// -------------------------------------------------------------- bar selection
+
+const MOUSE = { key: "openrazer:1532:00df", name: "Razer Viper", percent: 80, low: false }
+const HEADSET = { key: "headset:046d:0ab5", name: "G733", percent: 15, low: true }
+const LIST = M.merge([[MOUSE, HEADSET]]) // lowest first: headset, mouse
+
+test("normalizeSelection defaults to auto and bounds keys", () => {
+  assert.strictEqual(M.normalizeSelection(undefined), "auto")
+  assert.strictEqual(M.normalizeSelection(null), "auto")
+  assert.strictEqual(M.normalizeSelection("  "), "auto")
+  assert.strictEqual(M.normalizeSelection("none"), "none")
+  assert.strictEqual(M.normalizeSelection("x".repeat(500)).length, 128)
+})
+
+test("normalizeBarLabel maps the old Lowest to Percent", () => {
+  assert.strictEqual(M.normalizeBarLabel("Lowest"), "Percent")
+  assert.strictEqual(M.normalizeBarLabel("Percent"), "Percent")
+  assert.strictEqual(M.normalizeBarLabel("Count"), "Count")
+  assert.strictEqual(M.normalizeBarLabel("None"), "None")
+  assert.strictEqual(M.normalizeBarLabel("bogus"), "Percent")
+  assert.strictEqual(M.normalizeBarLabel(undefined), "Percent")
+})
+
+test("selectionCycle: auto, devices by name (not level), none", () => {
+  assert.deepStrictEqual(M.selectionCycle(LIST), ["auto", HEADSET.key, MOUSE.key, "none"])
+  assert.deepStrictEqual(M.selectionCycle([]), ["auto", "none"])
+  assert.deepStrictEqual(M.selectionCycle(null), ["auto", "none"])
+})
+
+test("stepSelection holds at the ends without wrap", () => {
+  assert.strictEqual(M.stepSelection(LIST, "auto", 1, false), HEADSET.key)
+  assert.strictEqual(M.stepSelection(LIST, HEADSET.key, 1, false), MOUSE.key)
+  assert.strictEqual(M.stepSelection(LIST, MOUSE.key, 1, false), "none")
+  assert.strictEqual(M.stepSelection(LIST, "none", 1, false), "none")
+  assert.strictEqual(M.stepSelection(LIST, "auto", -1, false), "auto")
+  assert.strictEqual(M.stepSelection(LIST, "auto", 10, false), "none")
+})
+
+test("stepSelection wraps around for clicks", () => {
+  assert.strictEqual(M.stepSelection(LIST, "none", 1, true), "auto")
+  assert.strictEqual(M.stepSelection(LIST, "auto", -1, true), "none")
+})
+
+test("stepSelection from a device that is gone starts at auto", () => {
+  assert.strictEqual(M.stepSelection(LIST, "upower:gone", 1, false), HEADSET.key)
+  assert.strictEqual(M.stepSelection([], "upower:gone", 1, false), "none")
+})
+
+test("resolveSelection", () => {
+  assert.deepStrictEqual(M.resolveSelection(LIST, "auto"), { mode: "auto", device: HEADSET })
+  assert.deepStrictEqual(M.resolveSelection(LIST, undefined), { mode: "auto", device: HEADSET })
+  assert.deepStrictEqual(M.resolveSelection([], "auto"), { mode: "auto", device: null })
+  assert.deepStrictEqual(M.resolveSelection(LIST, MOUSE.key), { mode: "device", device: MOUSE })
+  assert.deepStrictEqual(M.resolveSelection(LIST, "none"), { mode: "none", device: null })
+  assert.deepStrictEqual(M.resolveSelection(LIST, "upower:gone"), { mode: "missing", device: null })
+})
+
+test("fill does not expand placeholders inside the values", () => {
+  assert.strictEqual(M.fill("%1: %2%", ["Mouse", "42"]), "Mouse: 42%")
+  assert.strictEqual(M.fill("%1: %2%", ["Odd %2 name", "42"]), "Odd %2 name: 42%")
+  assert.strictEqual(M.fill("%1 %3", ["a"]), "a %3")
+})
+
+test("fill keeps markup-shaped names as plain text", () => {
+  const name = "<img src=\"https://example.invalid/t\">"
+  assert.strictEqual(M.fill("%1: %2%", [name, "5"]), name + ": 5%")
+})
+
+test("panelTargets: device rows in list order, then Lowest, None, reactive", () => {
+  assert.deepStrictEqual(M.panelTargets(LIST), [
+    { kind: "device", key: HEADSET.key }, { kind: "device", key: MOUSE.key },
+    { kind: "auto" }, { kind: "none" }, { kind: "reactive" },
+  ])
+  assert.deepStrictEqual(M.panelTargets(null).map(t => t.kind), ["auto", "none", "reactive"])
+})
+
+test("selectionTargetIndex lands on what the bar shows", () => {
+  assert.strictEqual(M.selectionTargetIndex(LIST, "auto"), 2)
+  assert.strictEqual(M.selectionTargetIndex(LIST, undefined), 2)
+  assert.strictEqual(M.selectionTargetIndex(LIST, "none"), 3)
+  assert.strictEqual(M.selectionTargetIndex(LIST, MOUSE.key), 1)
+  assert.strictEqual(M.selectionTargetIndex(LIST, "upower:gone"), 2) // back to Lowest
+  assert.strictEqual(M.selectionTargetIndex([], "none"), 1)
+})

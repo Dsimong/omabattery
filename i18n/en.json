@@ -8,5 +8,15 @@
   "device.remaining": "%1 left",
   "device.charging": "Charging",
   "notify.low.title": "Low battery",
-  "notify.low.body": "%1 is at %2%"
+  "notify.low.body": "%1 is at %2%",
+  "bar.lowest": "Lowest · %1: %2%",
+  "bar.device": "%1: %2%",
+  "bar.missing": "Device not available",
+  "bar.none": "No device on the bar",
+  "bar.hint": "Scroll to choose the device",
+  "panel.onBar": "On the bar",
+  "panel.lowest": "Lowest",
+  "panel.none": "None",
+  "panel.reactive": "Reactive color",
+  "panel.reactiveHint": "The icon changes color when the battery is low"
 }

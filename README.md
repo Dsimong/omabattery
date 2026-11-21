@@ -27,15 +27,38 @@ its last real reading until it wakes up.
 ## Install
 
 ```bash
-omarchy plugin add <repo-url>
+omarchy plugin add https://github.com/Dsimong/omabattery.git
 omarchy plugin enable dsimong.omabattery
 ```
+
+## On the bar
+
+| | |
+|---|---|
+| Left click | Open the panel |
+| Right click | Ask the devices again |
+| Wheel down / up | Next / previous device on the bar: `auto` → each device by name → `none` |
+| Middle click | Next device, wrapping around |
+
+The same choices are in the panel: click a device to put it on the bar (it
+gets a pin), or pick **Lowest** or **None** under *On the bar*, where the
+**Reactive color** switch is too. Arrow keys (or `j`/`k`) move through them
+and Enter or Space picks.
+
+The icon, its percentage and its color follow the device on the bar. In
+`auto` it is the lowest battery and it turns urgent when any device is low;
+with a device chosen, only that device's level counts. `none` leaves a plain
+icon with no reading. A chosen device that is not connected, or has given no
+reading yet since the shell started, shows a faded outline until it is back.
+The choice is saved in `shell.json` and shared by the bars on every monitor.
 
 ## Settings
 
 | Key | Default | |
 |---|---|---|
-| `barLabel` | `Lowest` | `None`, `Lowest` (% of the lowest device) or `Count` |
+| `barLabel` | `Percent` | `None`, `Percent` (% of the device on the bar) or `Count`. The old `Lowest` still reads as `Percent` |
+| `device` | `auto` | Device on the bar: `auto` (lowest battery), `none`, or a device key. Normally set from the bar, see below |
+| `reactiveColor` | `true` | Icon turns the theme's urgent color when the device on the bar is low. Also a switch in the panel |
 | `lowThreshold` | `20` | Low battery threshold (%) |
 | `headsetcontrol` | `true` | Query USB headsets with `headsetcontrol` |
 | `pollSeconds` | `60` | How often OpenRazer and HeadsetControl are asked (UPower needs no polling) |
