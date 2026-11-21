@@ -10,7 +10,6 @@ Logitech Unifying/Bolt, USB gaming headsets) in a single panel with battery bars
 | Source | Covers |
 |---|---|
 | UPower | Bluetooth with Battery Service, Logitech Unifying/Bolt, kernel `power_supply` peripherals |
-| BlueZ | Bluetooth devices with `batteryAvailable` that UPower does not expose |
 | OpenRazer | Razer wireless mice/keyboards (HyperSpeed receivers) via the `openrazer-driver-dkms` kernel driver |
 | HeadsetControl (optional) | USB-dongle gaming headsets (SteelSeries, HyperX, Logitech G, Corsair…) |
 
@@ -62,12 +61,23 @@ The choice is saved in `shell.json` and shared by the bars on every monitor.
 | `lowThreshold` | `20` | Low battery threshold (%) |
 | `headsetcontrol` | `true` | Query USB headsets with `headsetcontrol` |
 | `pollSeconds` | `60` | How often OpenRazer and HeadsetControl are asked (UPower needs no polling) |
-| `notifyLow` | `true` | Notify once per threshold crossing |
+| `notifyLow` | `true` | Notify when a device drops to the threshold, see below |
+
+## Low battery notification
+
+A device that drops to `lowThreshold` while discharging gets one
+notification. It warns again only after charging, or after climbing 5 points
+above the threshold, so a level wobbling around it does not keep notifying.
+A device that is asleep or switched off (showing its last known level) does
+not notify, and one that reconnects at the same low level does not notify
+twice. The check waits a few seconds after the shell starts, so it uses your
+threshold rather than the default. It starts over when the shell restarts.
 
 ## Notes
 
-- Some Bluetooth headphones only expose battery when BlueZ experimental
-  features are on: `Experimental = true` in `/etc/bluetooth/main.conf`.
+- Some Bluetooth headphones only report their battery to UPower when the
+  Bluetooth daemon's experimental features are on: `Experimental = true` in
+  `/etc/bluetooth/main.conf`.
 - USB-dongle headsets need HeadsetControl: `omarchy pkg add headsetcontrol`.
   Its package ships udev rules that give your user access to the dongle; they
   apply after replugging it (or rebooting). Without the binary, or with the

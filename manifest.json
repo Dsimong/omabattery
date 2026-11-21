@@ -83,7 +83,8 @@
         "key": "notifyLow",
         "type": "boolean",
         "label": "Notify on low battery",
-        "defaultValue": true
+        "defaultValue": true,
+        "description": "Once per drop to the threshold; again after charging or climbing 5 points above it."
       }
     ]
   }

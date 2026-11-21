@@ -371,10 +371,76 @@ function isLow(percent, threshold) {
   return clampPercent(percent) <= Number(threshold)
 }
 
+// -------------------------------------------------------- low-battery alerts
+
+// Points above the threshold a device has to climb back to before it can warn
+// again, so a level wobbling around it (20, 21, 20…) warns once.
+var REARM_MARGIN = 5
+var MAX_NOTIFIED = 64
+
+// Which devices to warn about now, once per drop below the threshold.
+//   notified: { key: true } for the devices already warned about.
+//   -> { alerts: [normalized device], notified: {...} }
+// A device warns when it is low (see from*()) with a live reading and has not
+// warned yet. It re-arms when it charges or climbs REARM_MARGIN points above
+// the threshold. A stale reading (device asleep or off) neither warns nor
+// re-arms, and a device that leaves keeps its state, so one that reconnects
+// at the same low level does not warn twice.
+function lowAlerts(devices, notified, threshold) {
+  var list = devices || []
+  var prev = notified || {}
+  var next = {}
+  for (var k in prev) {
+    if (Object.prototype.hasOwnProperty.call(prev, k)) next[k] = true
+  }
+  var alerts = []
+  var rearmAbove = Number(threshold) + REARM_MARGIN
+  for (var i = 0; i < list.length; i++) {
+    var d = list[i]
+    if (!d || !d.key || d.stale) continue
+    if (d.low) {
+      if (!next[d.key]) {
+        next[d.key] = true
+        alerts.push(d)
+      }
+    } else if (d.state === "charging" || d.state === "full" || clampPercent(d.percent) > rearmAbove) {
+      delete next[d.key]
+    }
+  }
+  // Keys of devices that left pile up across replugs (UPower's nativePath
+  // can change); past the bound, forget the ones not connected now.
+  if (Object.keys(next).length > MAX_NOTIFIED) {
+    var present = {}
+    for (var j = 0; j < list.length; j++) {
+      if (list[j] && list[j].key) present[list[j].key] = true
+    }
+    for (var key in next) {
+      if (!present[key]) delete next[key]
+    }
+  }
+  return { alerts: alerts, notified: next }
+}
+
+// Body of the low-battery notification from its catalog string ("%1 is at
+// %2%"). The daemon reads a body as markup, and Omarchy's decodes entities
+// (several passes) before putting back <b>, <i> and <a href>, so escaping is
+// not enough to stop a device named "<a href=…>" becoming a link: its <, >
+// and & are dropped instead. One pass over the template, so a "%2" inside the
+// name is kept as written.
+var NOT_IN_BODY = /[<>&\u0000-\u001f\u007f]/g
+
+function lowBatteryBody(template, name, percent) {
+  var plain = String(name || "").replace(NOT_IN_BODY, "").trim().slice(0, MAX_NAME) || "Device"
+  return String(template || "").replace(/%([12])/g, function(match, n) {
+    return n === "1" ? plain : String(percent)
+  })
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     clampPercent: clampPercent, macFrom: macFrom,
     fromUPower: fromUPower, fromBluez: fromBluez,
+    lowAlerts: lowAlerts, lowBatteryBody: lowBatteryBody,
     parseOpenRazer: parseOpenRazer, carryOpenRazer: carryOpenRazer, fromOpenRazer: fromOpenRazer,
     parseHeadset: parseHeadset, carryHeadset: carryHeadset, fromHeadset: fromHeadset,
     dedupe: dedupe, sort: sort, merge: merge, groupOf: groupOf,
