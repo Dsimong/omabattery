@@ -56,7 +56,7 @@ The choice is saved in `shell.json` and shared by the bars on every monitor.
 | Key | Default | |
 |---|---|---|
 | `barLabel` | `Percent` | `None`, `Percent` (% of the device on the bar) or `Count`. The old `Lowest` still reads as `Percent` |
-| `device` | `auto` | Device on the bar: `auto` (lowest battery), `none`, or a device key. Normally set from the bar, see below |
+| `device` | `auto` | Device on the bar: `auto` (lowest battery), `none`, or a device key. Normally set from the bar, see above |
 | `reactiveColor` | `true` | Icon turns the theme's urgent color when the device on the bar is low. Also a switch in the panel |
 | `lowThreshold` | `20` | Low battery threshold (%) |
 | `headsetcontrol` | `true` | Query USB headsets with `headsetcontrol` |
